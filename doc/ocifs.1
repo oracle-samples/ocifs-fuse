@@ -1,0 +1,834 @@
+.\"
+.\" Copyright (c) 2023, Oracle and/or its affiliates.
+.\"
+.\" Licensed under the Universal Permissive License v 1.0
+.\" as shown at https://oss.oracle.com/licenses/upl/
+.\"
+
+.TH OCIFS 1 "March 2023" "" "User Manuals"
+
+.\"
+.\" NAME
+.\"
+.SH NAME
+ocifs \- mount an Oracle Cloud Infrastructure Object Storage bucket
+
+.\"
+.\" SYNOPSIS
+.\"
+.SH SYNOPSIS
+
+.B ocifs
+[--auth=<method>] [--config=<file>] [--region=<name>]
+.br
+      [--cache=<path>] [--cache-keep] [--cache-reuse]
+.br
+      [--cache-fsfree=<fsfree-spec>] [--cache-purge=<purge-spec>]
+.br
+      [--debug=<level>[,<level>...]] [-o <options>]
+.br
+      [-d] [-f] [-s]
+.I bucket-path dir
+
+.B ocifs
+[--auth=<method>] [--config=<file>] [--region=<name>]
+.br
+.B "      "--check-bucket
+.I bucket
+
+.B ocifs --version
+
+.\"
+.\" DESCRIPTION
+.\"
+.SH DESCRIPTION
+
+.\"
+.\" Introduction
+.\"
+.SS Introduction
+The
+.B ocifs
+command mounts an Oracle Cloud Infrastructure (OCI) Object
+Storage
+.I bucket-path
+in directory
+.IR dir .
+This makes OCI Object Storage objects from the specified
+.I bucket-path
+accessible as regular files or directories in directory
+.IR dir .
+Although within an OCI Object Storage bucket, objects
+exist in a flat structure, OCIFS simulates a directory structure from
+prefix strings present in object names that includes one or more forward
+slashes (/). OCIFS is implemented as a FUSE filesystem.
+
+For more information about OCI Object Storage, see
+.B Overview of Object Storage
+in the
+.B Oracle Cloud Infrastructure Documentation:
+.br
+https://docs.oracle.com/en-us/iaas/Content/Object/Concepts/objectstorageoverview.htm
+
+.\"
+.\" Bucket Path
+.\"
+.SS Bucket Path
+The OCI Object Storage objects to mount are specified with
+.IR bucket-path .
+.PP
+.I bucket-path
+can be:
+.TP
+.B A bucket name (bucket-name)
+In that case, all objects from the specified  bucket are accessible as
+regular files or directories in directory
+.IR dir .
+.br
+Example: bucket-20190306-1359
+.TP
+.B A bucket sub-folder (bucket-name/folder-path)
+In that case, only objects from the specified sub-folder are accessible as
+regular files or directories in directory
+.IR dir .
+.br
+Example: bucket-20190306-1359/marathon/participants
+.PP
+
+.\"
+.\" Mounting and Unmounting
+.\"
+.SS Mounting and Unmounting
+An OCI Object Storage bucket path can be mounted using either the
+.B ocifs
+command:
+
+.RS
+ocifs [<options>]
+.I bucket-path dir
+.RE
+
+or
+.BR mount (8):
+
+.RS
+mount -t fuse.ocifs [-o <options>]
+.I bucket-path dir
+.RE
+
+After an OCI Object Storage bucket path is mounted, it can be unmounted using
+either
+.BR fusermount (1):
+
+.RS
+fusermount -u
+.I dir
+.RE
+
+or
+.BR umount (8):
+
+.RS
+umount
+.I dir
+.RE
+
+.\"
+.\" Cache
+.\"
+.SS Cache
+OCIFS caches objects of a mounted OCI Object Storage bucket path in a
+directory, by default
+.IR ~/.ocifs/<bucket>/ .
+For better performances, use a local directory located on a storage
+device with a fast access time. Also ensure that the cache directory
+is located on a storage device with enough free space to potentially
+host the entire content of the mounted OCI Object Storage bucket path,
+or at least the entire content of objects which be will read or written.
+If the storage device where the cache directory is located gets full
+then some OCIFS operations might fail. The space used by the cache can
+be limited using the
+.B cache-fsfree
+option.
+The
+.B cache-purge
+option can be used to be specified if and when the cache should be purged.
+A cache purge will remove data from the cache for files which have been
+closed for a specified amount of time. By default, the cache is never
+purged.
+
+An OCIFS filesystem cannot be mounted if there is an existing, non-empty
+cache directory, unless the
+.B cache-reuse
+option was specified. The OCIFS cache is removed when the filesystem is
+unmounted, unless the filesystem was mounted with the
+.B cache-keep
+option.
+
+.\"
+.\" Configuration
+.\"
+.SS Configuration
+OCIFS might require information to access an OCI Object Storage bucket
+depending on the authentication method used. The authentication method
+can be either API key-based authentication, instance principal
+authentication, or resource principal authentication.
+
+.\"
+.\" API Key-Based Authentication
+.\"
+.SS API Key-Based Authentication
+
+The API key-based authentication can be used from any system. It requires
+a local OCI SDK and CLI configuration file (by default
+.IR ~/.oci/config )
+with a
+.B [DEFAULT]
+profile and the following entries:
+.TP
+.B user
+OCID of the user accessing the Oracle Cloud Infrastructure.
+.br
+Example: ocid1.user.oc1..<unique_ID>
+.TP
+.B tenancy
+OCID of your tenancy.
+.br
+Example: ocid1.tenancy.oc1..<unique_ID>
+.TP
+.B region
+An Oracle Cloud Infrastructure region.
+.br
+Example: us-ashburn-1
+.TP
+.B fingerprint
+Fingerprint for the public key used for this user.
+.TP
+.B key_file
+Full path and filename to the private key.
+.br
+Example: ~/.oci/oci_api_key.pem
+.PP
+For information, see
+.B SDK and CLI configuration
+in the
+.B Oracle Cloud Infrastructure Documentation:
+.br
+https://docs.oracle.com/en-us/iaas/Content/API/Concepts/sdkconfig.htm
+
+.\"
+.\" Instance Principal Authentication
+.\"
+.SS Instance Principal Authentication
+The instance principal authentication can only be used from an
+authorized OCI instance. The OCI instance should be part of an OCI
+Dynamic Group, and a policy should allow the dynamic group to manage
+Object Storage. With this setting, no configuration file is needed.
+The OCI instance will automatically discover information to authenticate.
+
+For more information, see
+.B Calling Services from an Instance
+in the
+.B Oracle Cloud Infrastructure Documentation:
+.br
+https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm
+
+.\"
+.\" Resource Principal Authentication
+.\"
+.SS Resource Principal Authentication
+The resource principal authentication can only be used from an
+authorized OCI function. The OCI function should be part of an OCI
+Dynamic Group, and a policy should allow the dynamic group to manage
+Object Storage. With this setting, no configuration file is needed.
+The OCI function will automatically discover information to authenticate.
+
+For more information, see
+.B Accessing Other Oracle Cloud Infrastructure Resources from Running Functions
+in the
+.B Oracle Cloud Infrastructure Documentation:
+.br
+https://docs.oracle.com/en-us/iaas/Content/Functions/Tasks/functionsaccessingociresources.htm
+
+.\"
+.\" OPTIONS
+.\"
+.SH OPTIONS
+
+.\"
+.\" Command Only Options
+.\"
+.SS Command Options
+By default, the
+.B ocifs
+command mount the specified Object Storage bucket path as a filesystem.
+The following options change the default behavior of the
+.B ocifs
+command.
+.\"
+.\" --check-bucket
+.\"
+.TP
+.B --check-bucket
+Check the specified Object Storage bucket. This checks that the bucket
+is accessible, and that objects in the bucket have names which are
+compatible with the OCIFS filesystem. This also checks for conflicting
+object and prefix names. For more information, see
+.B Incompatible Object Names
+and
+.B Object and Prefix Name Conflicts
+in the
+.B NOTES
+section.
+.\"
+.\" --version
+.\"
+.TP
+.B --version
+Print the version.
+
+.\"
+.\" Configuration or Mount Options
+.\"
+.SS Configuration or Mount Options
+The following options are configuration or mount options. They can
+be specified as long options --<option>[=<value>] or with the -o
+option: -o <option>[=<value>].
+
+These options can also be used as options to the
+.BR mount (8)
+command.
+.\"
+.\" auth
+.\"
+.TP
+.B auth=<method>
+Set the authentication method. Available authentication methods are:
+.RS
+.TP
+.B api_key
+Use the API key-based authentication method. This is the default.
+.TP
+.B instance_principal
+Use the instance principal authentication method. This authentication
+method can be used only with Oracle Cloud Infrastructure instances which
+have been configured as Instance Principal.
+.TP
+.B resource_principal
+Use the resource principal authentication method. This authentication
+method can be used only with Oracle Cloud Infrastructure functions.
+.RE
+.\"
+.\" cache
+.\"
+.TP
+.B cache=<path>
+Set the path to the cache directory. It can be an absolute path or
+relative path to the user home directory. The default cache directory is
+.IR ~/.ocifs/ .
+.\"
+.\" config
+.\"
+.TP
+.B config=<file>
+Set the path to the configuration file used for API key-based
+authentication. It can be an absolute path or relative path to the
+user home directory. The default configuration file is
+.IR ~/.oci/config .
+
+This option is ignored when the
+.B auth
+option is set to
+.BR instance_principal
+or
+.BR resource_principal .
+.\"
+.\" cache-keep
+.\"
+.TP
+.B cache-keep
+By default, the cache directory is removed when the filesystem is
+unmounted. When this option is used, the cache directory is not
+removed when the filesystem is unmounted.
+.\"
+.\" region
+.\"
+.TP
+.B region=<name>
+Override the region name. This defines the region or domain name for
+connecting the Oracle Cloud Infrastructure. If the name contains a
+dot character (.) then the name is used a domain name, otherwise the
+name is used as a region name and the domain name is set to
+.IR <name>.oraclecloud.com.
+.\"
+.\" cache-reuse
+.\"
+.TP
+.B cache-reuse
+When mounting a filesystem, reuse the cache directory if it exists.
+By default, the filesystem will not be mounted if it has a non-empty
+cache directory.
+.\"
+.\" cache-fsfree
+.\"
+.TP
+.B cache-fsfree=0|<percent>%|<num><unit>
+Specify the amount of space that should remain free on the cache
+filesystem when caching OCIFS entries data. If the free space is above
+this amount then OCIFS will try to cache data, otherwise it won't. If
+OCIFS doesn't cache data then OCIFS write operations will fail.
+
+Note that this option doesn't change the way OCIFS entries attributes
+(like the size) are cached.
+
+The amount of space can be specified as:
+.RS
+.TP
+.B 0
+Do not check for free space on the cache filesystem. With this option,
+OCIFS will try to cache data, no matter how much free space is
+available on the cache filesystem.
+.TP
+.B <percent>%
+The percentage of space (between 0% and 100%) that should remain free
+on the cache filesystem. If the percentage is 100% then no data will
+be cached.
+.TP
+.B <num>[KMGT]
+The amount of space in Kilobytes (K), Megabytes (M), Gigabytes (G)
+or Terabytes (T) that should remain free on the cache filesysten.
+.TP
+.B <num>[KMGT]i
+The amount of space in Kibibytes (Ki), Mebibytes (Mi), Gibibytes (Gi)
+or Tebibytes (Ti) that should remain free on the cache filesysten.
+.RE
+.HP
+
+The default setting is
+.BR cache-fsfree=5% .
+
+Using the option
+.B 0, 0%, 0[KMGT],
+or
+.B 0[KMGT]i
+have the same effect.
+
+Using the option
+.B 100%
+or an amount of space larger or equal than the size of the filesystem have
+the same effect.
+.\"
+.\" cache-purge
+.\"
+.TP
+.B cache-purge=never|<delay>
+Specify the cache purge delay. This defines the amount of time data should
+remain in cache after a file is closed.
+
+The cache purge delay can be specified as:
+.RS
+.TP
+.B never
+Never purge the cache. With this option, data in cache will be preserved
+as long as the OCIFS filesystem is mounted.
+.TP
+.TP
+.B <delay>
+The purge delay in seconds before purging cached data. If the purge delay
+is set 0 then data cached for a file are purged immediately after the file
+is closed.
+.RE
+.HP
+
+The default setting is
+.BR cache-fsfree=never .
+.\"
+.\" debug
+.\"
+.TP
+.B debug=<level>[,<level>...]
+Set the debug level. Debug information is printed on the standard output
+of the
+.B ocifs
+process. Available debug levels are:
+.RS
+.TP
+.B all
+Debug all.
+.TP
+.B cache
+Debug cache operations.
+.TP
+.B fops
+Debug FUSE operations.
+.TP
+.B oci
+Debug OCI requests; this also makes CURL request verbose.
+.TP
+.B other
+Debug other (unclassified) operations.
+.RE
+
+For more information about debugging, see the
+.B DIAGNOSTICS
+section.
+
+.\"
+.\" FUSE Options
+.\"
+.SS FUSE Options
+The
+.B ocifs
+command accepts the following FUSE options.
+.TP
+.B -d
+Enable FUSE debug output.
+.TP
+.B -f
+Run the
+.B
+ocifs
+command in foreground.
+.TP
+.B -s
+Run the
+.B
+ocifs
+command single-threaded instead of multi-threaded.
+.PP
+In addition, FUSE mount options described in
+.BR fuse (8)
+can be specified with the -o option.
+
+.\"
+.\" FILES
+.\"
+.SH FILES
+.I ~/.oci/config
+.RS
+The default configuration file used for API key-based authentication.
+.RE
+
+.I ~/.ocifs/
+.RS
+The default directory for caching Object Storage objects.
+Data are cached in the sub-directory
+.IR ~/.ocifs/<bucket>/cache/ .
+
+.\"
+.\" ENVIRONMENT
+.\"
+.SH ENVIRONMENT
+.TP
+.B REQUESTS_CA_BUNDLE
+If non-null, the full pathname to a PEM certificate bundle file which
+will be used, in addition to already installed Certificate Authority
+(CA) certificates, to validate connections with the Oracle Cloud
+Infrastructure.
+
+.\"
+.\" DIAGNOSTICS
+.\"
+.SH DIAGNOSTICS
+To enable diagnostics, use the FUSE -f option to run the ocifs process
+in foreground, and specify debug levels with the --debug option.
+In addition, you can use the FUSE -d option to enable FUSE debugging
+(this implies -f).
+.HP
+Example:
+
+$ ocifs -f --debug=all my-bucket mnt
+.PP
+Diagnostic information is output on the standard and error output of
+the ocifs process.
+
+.\"
+.\" NOTES
+.\"
+.SH NOTES
+
+.\"
+.\" Supported File Types
+.\"
+.SS Supported File Types
+OCIFS only supports regular files and directories. Symbolic links,
+physical links, special files (block, character, fifo special files)
+are not supported.
+
+.\"
+.\" File Attributes
+.\"
+.SS File Attributes
+File attributes (that is permissions, user and group ownership,
+access/modification/change times) are not persistent across mount.
+All attributes are reset when an OCIFS filesystem is unmounted
+and remounted.
+
+By default, permissions are set to 0755 for directories, and 0644
+for files; ownership is set with the uid and gid of the owner
+of the filesystem. File permissions and ownership cannot be changed,
+unless the OCIFS filesystem is mounted by root. Removing the write
+permission to a file will prevent newly read data from being cache
+(because OCIFS won't have permission to write to the cache file).
+
+.\"
+.\" Incompatible Object Names
+.\"
+.SS Incompatible Object Names
+An OCI Object Storage bucket can have objects with names which are not
+compatible with the Linux filesystem naming, for example
+.BR //foo
+or
+.BR foo////bar .
+These objects won't be accessible nor visible with OCIFS. To be usable
+with OCIFS, such objects should be renamed with names compatible with the
+Linux filesystem naming. Object renaming can be done using the Oracle
+Cloud Console.
+
+An OCI object name can have up to 1024 characters, and it can have a
+corresponding OCIFS filename which is larger the usual filesystem
+filename limit (typically a filename larger than 255 characters).
+Access to such object with OCIFS will be limited, see section
+.B Filename Limit
+from more information.
+
+The
+.B --check-bucket
+option can be used to check if a bucket has names which are not
+compatible with the OCIFS filesystem.
+
+.\"
+.\" Object and Prefix Name Conflicts
+.\"
+.SS Object and Prefix Name Conflicts
+If the same name is used both as an OCI Object Storage object name and
+as a prefix name then that name will appear as a directory entry with
+OCIFS, and the object with the same name won't accessible through OCIFS.
+To make the object visible with OCIFS, it should be renamed with a name
+which is not used as a prefix.
+
+For example, if an OCI Object Storage bucket has objects "foo" and
+"foo/bar" then "foo" is used both as an object name and as a prefix
+name. In that case, OCIFS will show entry "foo" as a directory and
+provide access to all objects starting with prefix "foo/" (for example
+object "foo/bar"). However, object "foo" won't be accessible.
+
+The
+.B --check-bucket
+option can be used to check if a bucket has conflicting object and
+prefix names.
+
+.\"
+.\" Filename Limit
+.\"
+.SS Filename Limit
+OCIFS supports filenames with a maximum of 1023 characters. This
+is generally larger than the filename limit for other filesystems
+(which is usually
+.BR NAME_MAX = 255 ).
+
+OCIFS won't allow the creation or the renaming of files or directories
+with a filename larger than the maximum filename supported by the
+filesystem used for the OCIFS cache (usually 255 characters). This
+restriction ensures that files and directories can be properly cached.
+
+If an OCI Object Storage buckets have objects with names larger than
+the maximum filename supported by the filesystem used for the OCIFS
+cache, then these objects will be visible as files or directories on
+an OCIFS fileystem but they won't be cached. As a consequence, access
+to these objects will be read-only and it will be slower. OCIFS
+read-write access and caching of these objects can be restored by
+renaming objects with names compatible with the filesystem used for
+the OCIFS cache. Renaming can be done using the Oracle Cloud Console,
+or directly through OCIFS for example with the
+.BR mv (1)
+command.
+
+.\"
+.\" Pathnames Limit
+.\"
+.SS Pathname Limit
+OCIFS supports pathnames with a maximum of 1023 characters. This is
+generally smaller than the Linux pathname limit (which is usually
+.BR PATH_MAX = 4096 ).
+
+.\"
+.\" File Size Limits
+.\"
+.SS File Size Limits
+OCI Object Storage supports objects with a maximum size of 10TB. OCIFS
+allows reading from an OCI object of any size. However, OCIFS write is
+currently limited to 50GB. This means that you cannot create or modify
+of a file with a size larger than 50GB.
+
+.\"
+.\" Data Synchronization
+.\"
+.SS Data Synchronization
+When writing to an OCIFS file, data are synchronized (that is data are
+effectively written back to the corresponding OCI Object Storage object)
+when the OCIFS file is closed. Any data synchronization error will be
+reported by the
+.BR close (2)
+system call.
+See the
+.B NOTES
+section of the
+.BR close (2)
+man page for more information for dealing with error returns from close().
+You can also request data to be explicitly synchronized using
+.BR fsync (2)
+or
+.BR fdatasync (2).
+
+Alternatively, you can make write operations to immediately synchronize
+data either for a specific file, by opening the file with the
+.BR O_SYNC
+or
+.BR O_DSYNC
+flag; or for all files, by mounting the OCIFS filesystem with the
+.BR sync
+option (-o sync).
+Note that using the
+.BR O_SYNC
+or
+.BR O_DSYNC
+open flags, or the
+.BR sync
+mount option can negatively impact performances.
+
+.\"
+.\" EXAMPLE
+.\"
+.SH EXAMPLE
+.\"
+.\" Configuration
+.\"
+.SS Configuration
+.HP
+Configuration File for API Key-Based Authentication
+
+$ cat ~/.oci/config
+.br
+[DEFAULT]
+.br
+user=ocid1.user.oc1..<unique_ID>
+.br
+fingerprint=12:34:56:78:90:ab:cd:ef:12:34:56:78:90:ab:cd:ef
+.br
+tenancy=ocid1.tenancy.oc1..<unique_ID>
+.br
+region=us-ashburn-1
+.br
+key_file=~/.oci/oci_api_key_public.pem
+.HP
+Configuration for Instance Principal Authentication
+.PP
+To use instance principal authentication with the OCI instance
+ocid1.instance.region1.sea.<unique_ID>, create an OCI dynamic group,
+for example dgroup-ocifs-instance, with a matching rule such as this one:
+
+.RS
+All {instance.id = 'ocid1.instance.region1.sea.<unique_ID>'}
+.RE
+
+Then create an OCI policy which allows dgroup-ocifs-instance to manage
+Object Storage, for example with the following policy statement:
+
+.RS
+Allow dynamic-group dgroup-ocifs to manage object-family in tenancy
+.RE
+
+.HP
+Configuration for Resource Principal Authentication
+.PP
+To use resource principal authentication with the OCI function
+ocid1.fnfunc.oc1.uk-london-1.<unique_ID>, create an OCI dynamic group,
+for example dgroup-ocifs-func, with a matching rule such as this one:
+
+.RS
+All {resource.id = 'ocid1.fnfunc.oc1.uk-london-1.<unique_ID>'}
+.RE
+
+Then create an OCI policy which allows dgroup-ocifs-func to manage Object
+Storage, for example with the following policy statement:
+
+.RS
+Allow dynamic-group dgroup-ocifs-func to manage object-family in tenancy
+.RE
+
+.\"
+.\" Mounting with ocifs command
+.\"
+.SS Mounting an OCI Object Storage bucket with the ocifs command
+.HP
+Using API key-based authentication
+
+$ ocifs my-bucket ~/mnt
+.HP
+Using instance principal authentication
+
+$ ocifs --auth=instance_principal my-bucket ~/mnt
+.HP
+Using resource principal authentication
+
+$ ocifs --auth=resource_principal my-bucket ~/mnt
+
+.\"
+.\" Mounting with mount command
+.\"
+.SS Mounting an OCI Object Storage bucket with the mount command
+.HP
+Using API key-based authentication
+
+# mount -t fuse.ocifs my-bucket /mnt
+.HP
+Using instance principal authentication
+
+# mount -t fuse.ocifs -o auth=instance_principal my-bucket /mnt
+.HP
+Using resource principal authentication
+
+# mount -t fuse.ocifs -o auth=resource_principal my-bucket /mnt
+
+.\"
+.\" Mounting sub-folder
+.\"
+.SS Mounting an OCI Object Storage bucket sub-folder
+.HP
+Using the ocifs command
+
+$ ocifs my-bucket/marathon/participants /mnt
+.HP
+Using the mount command
+
+# mount -t fuse.ocifs my-bucket/marathon/participants /mnt
+
+.\"
+.\" Unmount
+.\"
+.SS Unmount an OCI Object Storage bucket path
+.HP
+Using fusermount(1)
+
+$ fusermount -u ~/mnt
+.HP
+Using umount(8)
+
+# umount /mnt
+
+.\"
+.\" COPYRIGHT
+.\"
+.SH COPYRIGHT
+Copyright (c) 2023, Oracle and/or its affiliates.
+.br
+Licensed under the Universal Permissive License v 1.0
+as shown at https://oss.oracle.com/licenses/upl/
+
+.\"
+.\" SEE ALSO
+.\"
+.SH "SEE ALSO"
+.BR fuse (8),
+.BR fusermount (1)
