@@ -220,6 +220,7 @@ struct oci_config *oci_config_create_from_file(const char *filename,
 					       const char *region,
 					       const char *user_agent,
 					       int debug);
+void oci_config_init_private_key(RSA *key);
 int oci_config_init_object_storage(struct oci_config *config,
 				   const char *bucket);
 void oci_config_destroy(struct oci_config *config);

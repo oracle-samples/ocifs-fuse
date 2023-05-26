@@ -321,6 +321,8 @@ struct oci_config *oci_config_create_from_file(const char *filename,
 		goto error;
 	}
 
+	oci_config_init_private_key(config->private_key);
+
 done:
 	for (i = 0; i < OCI_CONFIG_ENTRY_COUNT; i++)
 		free(entry[i]);

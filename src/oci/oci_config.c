@@ -18,6 +18,20 @@
 
 static bool oci_config_use_security_token(struct oci_config *config);
 
+void oci_config_init_private_key(RSA *key)
+{
+	/*
+	 * Disable blinding for the OCI configuration private key as we
+	 * have notice issues with old openssl libraries which causes
+	 * the request signature to be invalid.
+	 *
+	 * Also we don't need blinding as the private key is used to
+	 * build the request signature so we are provided the function
+	 * and its input so there is no need to blind the input/output.
+	 */
+	RSA_blinding_off(key);
+}
+
 struct oci_config *oci_config_create_common(enum oci_config_auth auth,
 					    const char *region,
 					    const char *user_agent,

@@ -133,6 +133,8 @@ struct oci_config *oci_config_resource_principal(const char *region,
 		}
 	}
 
+	oci_config_init_private_key(config->private_key);
+
 	/* set the security token */
 	err = oci_config_refresh_token_resource_principal(config);
 	if (err)
