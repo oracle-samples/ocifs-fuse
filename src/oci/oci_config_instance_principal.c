@@ -148,6 +148,12 @@ static int oci_config_set_instance_principal(struct oci_config *config)
 		goto done;
 	}
 
+	/*
+	 * The tenant key is used as the private key to get the
+	 * security token.
+	 */
+	oci_config_init_private_key(config->tenant_key);
+
 	/* set the security token */
 	err = oci_config_set_token_instance_principal(config);
 	if (err)
@@ -210,6 +216,8 @@ struct oci_config *oci_config_instance_principal(const char *region,
 		OCI_ERROR("Failed to generate session key\n");
 		goto error;
 	}
+
+	oci_config_init_private_key(config->private_key);
 
 	err = oci_config_set_instance_principal(config);
 	if (err)
