@@ -7,7 +7,7 @@
 
 Name:		ocifs
 Version:	1.1.0
-Release:	1%{?dist}
+Release:	2%{?dist}
 Summary:	Filesystem for OCI Object Storage
 Source:		%{name}-%{version}.tar.bz2
 
@@ -42,5 +42,5 @@ autoreconf --install
 %{_bindir}/%{name}
 
 %changelog
-* Thu May 04 2023 Alexandre Chartre <alexandre.chartre@oracle.com> - 1.1.0-1
+* Thu Jun 01 2023 Alexandre Chartre <alexandre.chartre@oracle.com> - 1.1.0-2
 - Initial release
