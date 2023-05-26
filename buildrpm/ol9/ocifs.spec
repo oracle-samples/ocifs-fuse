@@ -13,7 +13,7 @@ Source:		%{name}-%{version}.tar.bz2
 
 License:	Universal Permissive License (UPL), Version 1.0
 
-BuildRequires:	autoconf automake make gcc libasan
+BuildRequires:	autoconf automake gcc libasan make openssl
 BuildRequires:	pkgconfig(cmocka) pkgconfig(jansson) pkgconfig(fuse)
 BuildRequires:	pkgconfig(libcurl) pkgconfig(openssl)
 Requires:	jansson fuse fuse-libs libcurl openssl-libs
