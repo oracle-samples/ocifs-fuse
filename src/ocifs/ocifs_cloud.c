@@ -84,7 +84,7 @@ int ocifs_cloud_check_object(const char *path)
  */
 int ocifs_cloud_check_prefix_used(const char *path)
 {
-	struct oci_os_list_objects list_objects;
+	struct oci_os_list_objects list_objects = { 0 };
 	char *object_name;
 	int count;
 	int rv;
