@@ -99,7 +99,7 @@ check-version:
 		if [ "$(OCIFS_VERSION)" != "$(RPM_PACKAGE_VERSION)" ]; then \
 			echo "OCIFS_VERSION and RPM_PACKAGE_VERSION mismatch" ; \
 		fi ; \
-		release=`echo $(RPM_PACKAGE_RELEASE) | sed 's/\..*//'` ; \
+		release=`echo $(RPM_PACKAGE_RELEASE) | sed 's/\.el.*//'` ; \
 		if [ "$(OCIFS_RELEASE)" != $${release} ]; then \
 			echo "OCIFS_RELEASE and RPM_PACKAGE_RELEASE mismatch" ; \
 		fi ; \
