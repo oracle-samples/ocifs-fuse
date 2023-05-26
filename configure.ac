@@ -9,7 +9,7 @@
 # OCIFS version and release number
 #
 m4_define([OCIFS_VERSION], [1.1.0])
-m4_define([OCIFS_RELEASE], [1])
+m4_define([OCIFS_RELEASE], [2])
 
 AC_INIT([OCIFS], m4_defn([OCIFS_VERSION])[-]m4_defn([OCIFS_RELEASE]))
 AM_INIT_AUTOMAKE([foreign])
