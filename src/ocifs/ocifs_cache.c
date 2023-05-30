@@ -2118,7 +2118,7 @@ ocifs_cache_purge_getnext(struct ocifs_cache *cache, time_t *purge_timep)
 		return NULL;
 	}
 
-	if (entry->purge_time < time(NULL)) {
+	if (entry->purge_time > time(NULL)) {
 		/* purge time not reached */
 		*purge_timep = entry->purge_time;
 		return NULL;
