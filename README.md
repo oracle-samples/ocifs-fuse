@@ -10,7 +10,15 @@ OCIFS is implemented as a FUSE filesystem.
 
 ### From RPM
 
-OCIFS is available as a RPM package on https://yum.oracle.com/.
+For Oracle Cloud instances running Oracle Linux 8 or 9, OCIFS is
+available as a RPM package in the oci_included repository.
+
+```
+# yum install ocifs
+```
+
+For more information about the oci_included repository, see
+[Installing Software on Oracle Linux Instances](https://docs.oracle.com/iaas/oracle-linux/getting-started/install-software-on-instance.htm)
 
 ### From Source
 
@@ -31,8 +39,12 @@ installed with the following command:
 
 ## Documentation
 
-The capability and usage of OCIFS are fully documented in the ocifs
-man page.
+The OCIFS documentation is available in the Oracle Cloud Infrastructure
+Documentation:
+[OCIFS Utility](https://docs.oracle.com/en-us/iaas/oracle-linux/ocifs/index.htm).
+
+The capability and usage of OCIFS are also documented in the ocifs man
+page.
 
 If ocifs is already installed then you can access the man page with:
 ```
